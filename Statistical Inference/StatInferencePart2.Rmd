@@ -1,0 +1,71 @@
+---
+title: "Statistical Inference Project Part 2"
+author: "Camille Tolentino"
+date: "10/7/2020"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Introduction
+  
+In this report we will analyze the ToothGrowth data in the R data sets package which shows the effect of vitamin C on tooth growth in guinea pigs.  The response is the length of odontoblasts (cells responsible for tooth growth) in 60 guinea pigs. Each animal received one of three dose levels of vitamin C (0.5, 1, and 2 mg/day) by one of two delivery methods, orange juice or ascorbic acid (a form of vitamin C and coded as VC).
+
+```{r}
+library(ggplot2)
+data("ToothGrowth")
+summary(ToothGrowth)
+```
+
+# Does the supplement significantly affect tooth growth? 
+
+First, we look at the the effect of the two supplements on tooth length.  
+
+```{r}
+ggplot(aes(x=supp, y=len), data=ToothGrowth)+ 
+  geom_boxplot(aes(fill=supp))+ 
+  xlab("Supplement") +ylab("Tooth length") +
+  scale_fill_discrete(labels = c("Orange Juice", "Vitamin C"))
+```
+
+Visually, orange juice and vitamin C are neck and neck based on tooth length.  To support this, we can conduct a ```t```-test. We consider our null hypothesis to be $H_0: \mu_{OJ} = {\mu}_{VC}$ that is, there is no significant difference between the mean tooth length for guinea pigs given orange juice supplements (mean = 20.66) and vitamin C (mean = 16.96).
+
+```{r}
+t.test(ToothGrowth$len[ToothGrowth$supp=="OJ"],
+       ToothGrowth$len[ToothGrowth$supp=="VC"],
+       paired = FALSE,var.equal = FALSE)
+```
+
+With $p-value = 0.06063 > 0.05$ and the interval $(-0.17,  7.57)$ containing $0$ we can conclude that at $95%$ confidence level, we cannot reject the null hypothesis.  This means, the difference between the change in length from orange juice and vitamin C is not significant.
+
+# Does dosage significantly affect tooth growth?
+
+Similar to what we have done with the supplements, we first look at the box plot for each dosage. But first, we change the class of dosage from numeric to factor for us to separate each observation.
+
+```{r}
+ToothGrowth$dose <-as.factor(ToothGrowth$dose)
+ggplot(aes(x=dose, y=len), data=ToothGrowth)+ 
+  geom_boxplot(aes(fill=dose))+ 
+  xlab("Dosage") +ylab("Tooth length")
+```
+
+Looking at the means, we can see that the three dosages have spread out values. 
+
+```{r}
+sapply(split(ToothGrowth$len,ToothGrowth$dose),mean)
+```
+We can then check this observation using a t-test between dosages.  For our null hypothesis, we can choose $H_0: \mu_{1} = {\mu}_{2}$.
+
+```{r}
+t.test(ToothGrowth$len[ToothGrowth$dose=="1"],
+       ToothGrowth$len[ToothGrowth$dose=="2"],
+       paired = FALSE,var.equal = FALSE)
+```
+
+With $p-value \approx 0 < 0.05$ and the interval $(-9,  -3.73)$ lying strictly on one side of $0$ we can conclude that at $95%$ confidence level, we can reject the null hypothesis.  This means, the difference between the change in length from the increase in dosage is significant. 
+
+# Conclusion
+
+Supplement type does not significantly contribute to tooth length while dosage change significantly affects tooth length.
