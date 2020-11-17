@@ -1,0 +1,176 @@
+---
+title: "Practical Machine Learning - Project"
+author: "Camille Tolentino"
+date: "11/14/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+# Overview
+
+This project aims to predict whether or not a specific activity is done correctly or incorrectly based on device accelerometer inputs. Using data from [Groupware Human Activity Recognition Project](http://groupware.les.inf.puc-rio.br/har), a model is generated for the purpose of prediction and tested on a given set. 
+
+### Dataset 
+
+The training data for this project are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv
+
+The test data are available here:
+
+https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv
+
+# Data Loading and Exploratory Data Analysis
+
+## Packages Needed
+```{r, echo = FALSE}
+library(caret)
+library(randomForest)
+library(ggplot2)
+library(corrplot)
+library(gbm)
+library(e1071)
+library(rpart)
+library(rattle)
+```
+
+## Data Preparation
+
+The data that we have currently has 160 variables.  We first want to split the training set into a training set and a validation set so we can check for the accuracy of different models on the data. 
+
+```{r}
+trainurl <- "https://d396qusza40orc.cloudfront.net/predmachlearn/pml-training.csv"
+testurl <-"https://d396qusza40orc.cloudfront.net/predmachlearn/pml-testing.csv"
+train <-read.csv(trainurl)
+testing <-read.csv(testurl)
+dim(train); dim(testing)
+```
+
+Since we will still be figuring out the best model for the prediction, we split the training set into a training set and validation set. 
+
+```{r}
+inTrain <- createDataPartition(y=train$classe,
+                               p = 0.7, list = FALSE)
+training <-train[inTrain,]
+validating <-train[-inTrain,]
+```
+
+
+Next, we check for variables we can possibly omit.  To do this we check the variables with nearly zero variation and those variables with more than 95% of observations as NA. We use the training set to determine which variables have to go and apply the same processing to the validation set and test set.
+
+```{r}
+zeroVar <- nearZeroVar(training)
+training <- training[,-zeroVar]
+validating <- validating[,-zeroVar]
+testing <- testing[,-zeroVar]
+
+naObs <- sapply(training, function(x) mean(is.na(x))) > 0.95
+training <- training [, naObs == FALSE]
+validating <- validating [, naObs == FALSE]
+testing <- testing [, naObs == FALSE]
+
+str(training)
+```
+
+We now have 59 variables left for consideration.  Looking at the first 5 however, these are descriptive variables that will be of no help to our calculations.  We can then proceed with omitting them as well. 
+
+```{r}
+training <- training[,-(1:5)]
+validating <- validating[,-(1:5)]
+testing <- testing[,-(1:5)]
+```
+
+Before we proceed with building our model, we want to see how many of our remaining variables are correlated.  To do so, we use ```corrplot``` to check create a visual correlation matrix for the remaining 54 variables. 
+
+```{r}
+corMatrix <- cor(training[, -54])
+corrplot(corMatrix, order = "FPC",
+         method = "color", type = "lower",
+         tl.cex = 0.3, tl.col = "black")
+```
+
+Seeing as we still have quite a number of variables with correlation > 0.8 represented by the darker shades of red and blue, we will use ```PCA``` as the preprocess function when we use the ```caret``` train function.
+
+
+# Methodology Testing
+
+we will be considering different prediction methodologies against the validation set and checking the one with best accuracy in order to choose the final methodology to use on the test set. 
+
+## Random Forest
+
+```{r}
+modRF <- train(classe ~., method = "rf",data=training, preProcess="pca") 
+modRF$finalModel
+```
+
+We then want to see the accuracy of this model against the validation set.  We do this by using the confusion matrix and then plotting the results. 
+
+```{r}
+predictRF <- predict(modRF, validating)
+cmRF<-confusionMatrix(predictRF, as.factor(validating$classe))
+ggplot(data = as.data.frame(cmRF$table),aes(x=Prediction,y=Reference,fill=Freq))+
+  geom_tile()+
+  theme_light()+
+  geom_text(aes(label = Freq),size = 8, color = "white")+
+  ggtitle("Random Forest Accuracy = 0.9779")
+```
+
+## Generalized Boost
+
+```{r}
+modBoost <- train(classe ~., method = "gbm",data=training, preProcess="pca")
+modBoost$finalModel
+```
+
+Similar to Random Forest, we check for the accuracy of the model in the validation set.
+
+```{r}
+predictBoost <- predict(modBoost, validating)
+cmBoost<- confusionMatrix(predictBoost, as.factor(validating$classe))
+ggplot(data = as.data.frame(cmBoost$table),aes(x=Prediction,y=Reference,fill=Freq))+
+  geom_tile()+
+  theme_light()+
+  geom_text(aes(label = Freq),size = 8, color = "white")+
+  ggtitle("Random Forest Accuracy = 0.8262")
+```
+
+Compared to the Random Forest, the Boost method has a lower accuracy at 83%.
+
+## Decision Trees
+
+```{r}
+modDT <- rpart(classe~., training)
+fancyRpartPlot(modDT)
+```
+
+Testing on the validation set and plotting accuracy
+
+```{r}
+predictDT <- predict(modDT,validating,type = "class")
+cmDT <- confusionMatrix(predictDT, as.factor(validating$classe))
+ggplot(data = as.data.frame(cmDT$table),aes(x=Prediction,y=Reference,fill=Freq))+
+  geom_tile()+
+  theme_light()+
+  geom_text(aes(label = Freq),size = 8, color = "white")+
+  ggtitle("Random Forest Accuracy = 0.7866")
+```
+
+Similar to boost method, the accuracy of decision tree method has lower accuracy at 79% compared to random forest. 
+
+# Model on Test Set
+
+Now that we saw which model among the ones we've tried gives the highest accuracy, we use the chosen model to predict ```classe``` in the test set provided. 
+
+```{r}
+predictTest <- predict(modRF, testing)
+```
+
+As a result we, have the below prediction for the 20 values in the testing set. 
+
+```{r}
+predictTest
+```
+
