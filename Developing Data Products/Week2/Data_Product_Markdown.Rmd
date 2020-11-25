@@ -1,0 +1,66 @@
+---
+title: "Typhoon Haiyan Path - Philippines"
+author: "Camille Tolentino"
+date: "11/25/2020"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+## Introduction
+
+This report shows a visual representation of the path of typhoon Haiyan as it passed through the Philippine Area of Responsibility and neighboring countries.  The data was taken from the [United Nations Office for the Coordination of Humanitarian Affairs office (OCHA) in the Philippines](https://data.humdata.org/dataset/philippines-other-0-0-0-0-0-0-0-0).  
+
+## Visualization
+
+Loading the required packages
+
+```{r}
+library(leaflet)
+library(RColorBrewer)
+library(foreign)
+```
+
+Next, we prepare the data.  The original file can be downloaded in dbf format among other formats.  To read this, we use the `read.dbf` function from the `foreign` package. We then separate the latitude and longitude details from the main data frame. 
+
+```{r}
+yolandaPath <- read.dbf("Typhoon_Yolanda_Path.dbf", as.is = FALSE)
+my_map <- cbind(yolandaPath$LAT,yolandaPath$LONG)
+colnames(my_map)<- c("lat","lng")
+head(my_map)
+```
+
+Additionally, we want to color code and have the map weights based on the typhoon category.  There are 7 typhoon categories in the dataset. 
+
+```{r}
+levels(yolandaPath$CATEGORY)
+```
+
+So we create another dataset wherein we take these levels and convert them to numeric to be used as radius and assign a color per level. The `brewer.pal` function from RColorBrewer was used to generate a list of colors from yellow to red depending on the levels we have under category. 
+
+```{r}
+myCategory <- yolandaPath$CATEGORY
+myCategory <- as.data.frame(myCategory)
+myCategory$cat <- yolandaPath$CATEGORY
+levels(myCategory$cat) <- c(3,4,5,6,7,1,2)
+myCategory$cat<- as.numeric(paste(myCategory$cat))
+myCategory$col <- as.factor(myCategory$cat)
+levels(myCategory$col) <- brewer.pal(7,"YlOrRd")
+head(myCategory)
+```
+
+Finally, using the `leaflet` package, we create this interactive map that shows the path of the typhoon Haiyan locally known as "Yolanda" together with the typhoon tagging at the time it crossed specific points in the map. 
+
+```{r}
+my_map %>%
+  leaflet() %>%
+  addTiles() %>%
+  addCircles(weight = 1, radius = myCategory$cat*50000,
+             color = myCategory$col) %>%
+  addLegend(position = "topright",
+            labels = c("Tropical depression","Tropical storm","Category 1","Category 2","Category 3","Category 4","Category 5"),
+            colors = levels(myCategory$col))
+```
+
