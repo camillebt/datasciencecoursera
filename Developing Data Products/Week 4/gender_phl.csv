@@ -1,5 +1,4 @@
 Country Name,Country ISO3,Year,Indicator Name,Indicator Code,Value
-#country+name,#country+code,#date+year,#indicator+name,#indicator+code,#indicator+value+num
 Philippines,PHL,2015,Firms with female top manager (% of firms),IC.FRM.FEMM.ZS,29.9
 Philippines,PHL,2009,Firms with female top manager (% of firms),IC.FRM.FEMM.ZS,32.7
 Philippines,PHL,2015,Firms with female participation in ownership (% of firms),IC.FRM.FEMO.ZS,69.2
