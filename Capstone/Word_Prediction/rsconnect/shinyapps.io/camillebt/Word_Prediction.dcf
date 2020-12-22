@@ -1,0 +1,12 @@
+name: Word_Prediction
+title: Word_Prediction
+username:
+account: camillebt
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 3424601
+bundleId: 4018781
+url: https://camillebt.shinyapps.io/Word_Prediction/
+when: 1608642966.29521
+asMultiple: FALSE
+asStatic: FALSE
